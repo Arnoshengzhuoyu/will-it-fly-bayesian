@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Will It Fly? Bayesian project proposal (short)</title>
+<style>
+  @page {
+    size: Letter;
+    margin: 0.7in 0.8in 0.75in 0.8in;
+    @bottom-center { content: counter(page); font-family: "Segoe UI", sans-serif; font-size: 8pt; color: #898781; }
+  }
+  :root { --ink: #1b1b1a; --ink2: #52514e; --accent: #1c5cab; --accent-bg: #eef4fc; --rule: #e1e0d9; --axis: #c3c2b7; --blue: #2a78d6; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: Calibri, "Segoe UI", sans-serif; font-size: 10.8pt; line-height: 1.35; color: var(--ink); background: #ffffff; margin: 0; }
+  h1 { font-family: "Segoe UI", sans-serif; font-weight: 600; font-size: 16pt; line-height: 1.2; margin: 0 0 3pt; }
+  .subtitle { font-family: "Segoe UI", sans-serif; font-size: 9pt; color: var(--ink2); margin: 0 0 8pt; }
+  h2 { font-family: "Segoe UI", sans-serif; font-weight: 600; font-size: 11.6pt; color: var(--accent); margin: 11pt 0 3.5pt; padding-bottom: 2pt; border-bottom: 1px solid var(--rule); break-after: avoid; }
+  p { margin: 0 0 5pt; }
+  ul, ol { margin: 0 0 5pt; padding-left: 16pt; }
+  li { margin-bottom: 2.5pt; }
+  sup, sub { line-height: 0; }
+  .callout { background: var(--accent-bg); border-left: 3px solid var(--blue); padding: 5.5pt 10pt; margin: 3pt 0 7pt; }
+  .callout p { margin: 0; }
+  code { font-family: Consolas, monospace; font-size: 9pt; background: #f3f2ee; padding: 0 2pt; border-radius: 2px; }
+  table { border-collapse: collapse; width: 100%; font-size: 9.5pt; line-height: 1.28; margin: 2pt 0 6pt; break-inside: avoid; }
+  th, td { text-align: left; padding: 2.5pt 6pt; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { font-family: "Segoe UI", sans-serif; font-weight: 600; font-size: 8.4pt; color: var(--ink2); border-bottom: 1px solid var(--axis); }
+  .wf td:first-child { font-weight: 700; width: 120pt; }
+  .wf td:last-child { color: var(--accent); width: 175pt; }
+  figure { margin: 5pt 0 7pt; break-inside: avoid; }
+  figure img { width: 84%; display: block; margin: 0 auto; }
+  figcaption { font-size: 8.9pt; color: var(--ink2); line-height: 1.28; margin-top: 2pt; }
+  math { font-family: "Cambria Math", math; font-size: 1.03em; }
+  math[display="block"] { margin: 3pt 0 5pt; }
+  .refs { font-size: 8.5pt; line-height: 1.26; color: var(--ink2); padding-left: 18pt; }
+  .refs li { margin-bottom: 1pt; }
+</style>
+</head>
+<body>
+
+<h1>Will It Fly? Predicting Echo-MS detectability from chemical structure with Bayesian models</h1>
+
+<div class="callout"><p><b>Goal:</b> I&rsquo;d like to use a compound&rsquo;s structure to predict how likely we are to detect it in positive-ion mode on the Echo-MS, as a calibrated probability, with uncertainty that grows for unusual molecules. In chemistry terms this is a QSAR/QSPR model, built the Bayesian way.</p></div>
+
+<h2>1. Background</h2>
+<p>A mass spectrometer weighs molecules, but only charged ones. So the sample is sprayed into a fine mist, where some molecules pick up an extra proton (H<sup>+</sup>; &ldquo;positive-ion mode&rdquo;). The instrument then reports a <i>peak area</i> at mass <i>M</i>&nbsp;+&nbsp;1.007. A compound that gives a clear peak is said to &ldquo;fly&rdquo;. Molecules with a basic nitrogen (e.g. amines) grab a proton easily and usually fly. Molecules with an acidic group (e.g. carboxylic acids) usually don&rsquo;t. These are tendencies, not rules.</p>
+<p>The <b>Echo-MS</b> is a high-throughput mass spectrometer. A sound pulse shoots a nanoliter droplet straight from a 1536-well plate into the instrument, in under 2 seconds per sample [1]. OpenADMET and Octant use it to measure how liver enzymes break down drug-like compounds. A compound that doesn&rsquo;t fly can&rsquo;t be measured, so they pre-screen whole libraries. A model that predicts flying from structure could replace part of that screen and say how much to trust each call.</p>
+<p><b>Where this project comes from.</b> I&rsquo;m in Josh Swamidass&rsquo;s lab, where we work with OpenADMET&rsquo;s Echo-MS data and the lab&rsquo;s XenoSite tools for predicting drug metabolism. My work so far has been on the mass-spec side.</p>
+<p>A recurring problem: <b>most predicted metabolites are never seen.</b> For reactions that split a parent into two products, we detect neither product in 93% of cases and both in only 0.1%. Some of these products are probably never formed. But many may simply not ionize, and right now a missing peak can&rsquo;t tell us which. A model of which molecules &ldquo;fly&rdquo; would help separate &ldquo;not formed&rdquo; from &ldquo;formed but invisible&rdquo;. The Will It Fly data, measured on the same kind of instrument, is the natural training set.</p>
+
+<h2>2. Data</h2>
+<p>I found the &ldquo;Will It Fly&rdquo; data in a public Zenodo dataset released by OpenADMET and Octant (record 21450795, 2026) [2]. The raw file is <code>will_it_fly_in_mass_spec.tsv</code>. It has 11,353 compounds, each with a structure (a SMILES string) and two peak areas: one with ammonium formate and one with ammonium fluoride added to the carrier solvent. Key facts from my first look:</p>
+<ul>
+  <li><b>No yes/no label, only peak areas.</b> A cutoff of 10,000 reproduces the reported pass rates (52.9% formate, 78.6% fluoride). About 2&ndash;3% of areas are exactly 0 (&ldquo;no peak found&rdquo;).</li>
+  <li><b>Chemistry matters</b> (Fig.&nbsp;1B). With formate, 69% of compounds with a basic N and no acid fly, vs. 5% with an acid and no basic N.</li>
+  <li><b>The noise isn&rsquo;t constant.</b> The two additives agree to about 0.2 log units for strong signals, but only 0.4&ndash;0.5 near the detection floor.</li>
+  <li><b>The task is learnable but uncertain.</b> A quick random forest reaches AUC 0.89 (formate), and the library is very diverse (89% of scaffolds are unique).</li>
+</ul>
+
+<figure>
+  <img src="fig1.svg" alt="Figure 1: distribution of peak areas, and share of compounds above the cutoff by chemistry group">
+  <figcaption><b>Figure 1.</b> (A) Peak areas form one smooth hump with no natural break, so &ldquo;flies&rdquo; is a cutoff we choose (dashed line: 10,000). (B) Share of compounds above the cutoff, grouped by basic nitrogen and/or acidic group.</figcaption>
+</figure>
+
+<h2>3. Methods: standard QSAR workflow, Bayesian models</h2>
+<table class="wf">
+  <tr><th>QSAR step</th><th>What I&rsquo;ll do</th><th>Bayesian part</th></tr>
+  <tr><td>1. Data and curation</td><td>Check structures; define &ldquo;detected&rdquo; (cutoff; zeros)</td><td>Zeros handled as censored data</td></tr>
+  <tr><td>2. Descriptors</td><td>The lab&rsquo;s existing descriptor code (xenosite-predict, <code>phase1_mol.py</code>) [3]; Morgan fingerprints</td><td>&mdash;</td></tr>
+  <tr><td>3. Feature selection</td><td>Drop constant and correlated features</td><td>ARD priors instead of stepwise selection</td></tr>
+  <tr><td>4. Splitting</td><td>20% external test set; random and cluster-based splits</td><td>&mdash;</td></tr>
+  <tr><td>5. Model building</td><td>Three Bayesian models (below)</td><td>Laplace, MCMC, Gaussian processes</td></tr>
+  <tr><td>6. Validation</td><td>CV, external test set, Y-randomization</td><td>Log loss, calibration, posterior predictive checks</td></tr>
+  <tr><td>7. Applicability domain</td><td>Where can the model be trusted?</td><td>Predictive uncertainty as a built-in domain</td></tr>
+  <tr><td>8. Interpretation</td><td>Which features matter</td><td>Credible intervals on each effect</td></tr>
+</table>
+
+<p><b>Model 1: Bayesian logistic regression</b> on the label (area &gt; 10,000), <math><mi>p</mi><mo stretchy="false">(</mo><mi>y</mi><mo>=</mo><mn>1</mn><mo>&#x2223;</mo><mi>&#x1D431;</mi><mo stretchy="false">)</mo><mo>=</mo><mi>&#x3C3;</mi><mo stretchy="false">(</mo><msup><mi>&#x1D430;</mi><mo>&#x22A4;</mo></msup><mi>&#x1D431;</mi><mo stretchy="false">)</mo></math> with a Gaussian or ARD prior. The posterior comes from the Laplace approximation, checked against MCMC. It is simple and interpretable: each coefficient comes with a credible interval.</p>
+
+<p><b>Model 2: censored regression on log peak area.</b> Model <math><mi>z</mi><mo>=</mo><msub><mi>log</mi><mn>10</mn></msub><mtext>area</mtext><mo>=</mo><mi>f</mi><mo stretchy="false">(</mo><mi>&#x1D431;</mi><mo stretchy="false">)</mo><mo>+</mo><mi>&#x3B5;</mi></math> and treat zeros as &ldquo;below the detection limit&rdquo; (a Tobit likelihood). This uses the full signal instead of a yes/no cut. The detection probability for any cutoff <i>T</i> then comes from the posterior predictive:</p>
+<math display="block">
+  <mi>P</mi><mo stretchy="false">(</mo><mtext>flies</mtext><mo>&#x2223;</mo><msub><mi>&#x1D431;</mi><mo>&#x22C6;</mo></msub><mo>,</mo><mi>&#x1D49F;</mi><mo stretchy="false">)</mo><mo>=</mo>
+  <mi mathvariant="normal">&#x3A6;</mi><mrow><mo>(</mo><mfrac><mrow><msub><mi>&#x3BC;</mi><mo>&#x22C6;</mo></msub><mo>&#x2212;</mo><msub><mi>log</mi><mn>10</mn></msub><mi>T</mi></mrow><msqrt><msubsup><mi>&#x3C3;</mi><mi>&#x3B5;</mi><mn>2</mn></msubsup><mo>+</mo><msubsup><mi>s</mi><mo>&#x22C6;</mo><mn>2</mn></msubsup></msqrt></mfrac><mo>)</mo></mrow>
+</math>
+<p>It combines model uncertainty (<math><msubsup><mi>s</mi><mo>&#x22C6;</mo><mn>2</mn></msubsup></math>) and measurement noise (<math><msubsup><mi>&#x3C3;</mi><mi>&#x3B5;</mi><mn>2</mn></msubsup></math>, allowed to grow near the detection floor). If the lab changes its cutoff, nothing needs retraining. For the noise prior, I&rsquo;ll use the reactivity experiment from the same data release [2]. There, each compound&rsquo;s no-enzyme control was measured in 4 replicate wells on the same Echo-MS, so the spread between those replicates is pure measurement noise. Those are different compounds from the Will It Fly set, so the prior doesn&rsquo;t reuse the training data.</p>
+
+<p><b>Model 3: Gaussian process</b> with a Tanimoto (substructure-similarity) kernel on fingerprints [4], with Laplace/EP inference and kernels chosen by marginal likelihood [5]. Its uncertainty grows for molecules unlike the training set, which gives a natural applicability domain. There are existing tools I can build on: the EPA model, which predicts how easily a compound is detected in positive or negative mode, and MS2Quant and IE_prediction, which predict positive-mode ionization efficiency. I&rsquo;ll use their prediction as the GP&rsquo;s prior mean, so the model only learns what is specific to the Echo-MS. They also serve as baselines.</p>
+
+<p><b>Evaluation:</b> log loss, Brier score and calibration plots (are the probabilities honest?), plus AUC and MCC against a random forest baseline. I&rsquo;ll also check whether high uncertainty actually flags wrong predictions. <b>Stretch goal:</b> use the uncertainty to choose which compounds to measure (active learning).</p>
+
+<h2>4. Open question</h2>
+<p>Is this too much work for one course project? If so, which of the three models would you recommend I focus on?</p>
+
+<h2>References</h2>
+<ol class="refs">
+  <li>Zhang H, et al. Acoustic ejection mass spectrometry for high-throughput analysis. <i>Analytical Chemistry</i> (2021). doi:10.1021/acs.analchem.1c01137</li>
+  <li>Simpkins S, Warneford-Thomson R, Edgar S, MacDermott-Opeskin H. <i>Data release: Building the OpenADMET data engine.</i> Zenodo, record 21450795 (2026). File: will_it_fly_in_mass_spec.tsv.</li>
+  <li>Swamidass Lab. <i>xenosite-predict</i> (descriptor modules in xenosite.predict.v1.features). https://github.com/swamidasslab/xenosite-predict</li>
+  <li>Ralaivola L, Swamidass SJ, Saigo H, Baldi P. Graph kernels for chemical informatics. <i>Neural Networks</i> 18, 1093&ndash;1110 (2005).</li>
+  <li>Rasmussen CE, Williams CKI. <i>Gaussian Processes for Machine Learning</i>. MIT Press (2006).</li>
+</ol>
+
+</body>
+</html>

@@ -1,0 +1,10 @@
+# environment
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+
+# data: re-download with scripts/download_data.py
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
