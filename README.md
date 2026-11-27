@@ -79,15 +79,31 @@ fine while running:
 
 ![novelty versus error](figures/05_model3_gp__4-link-two-does-novelty-track-error.png)
 
-The proposal assumed a GP's predictive variance would give an applicability domain for free:
-unfamiliar molecule, larger variance, less trustworthy prediction. **It does not.** Filtering
-the test set by GP variance (red) leaves accuracy flat at 80% — the variance is a working
-novelty detector, but on this task novelty is not what makes predictions wrong. Correlation
-between variance and error is −0.09 to −0.02 across four splits.
+**How to read this**, right to left. The question it answers is the practical one: *I can only
+afford to run some of these compounds — can the model tell me which calls to trust?* At the
+right edge nothing is discarded and accuracy is 80%, the grey line. Moving left discards the
+predictions the model is least sure of, keeping only the most trusted. **A trust signal that
+works makes the line climb**: fewer compounds kept, higher accuracy among those left.
 
-Something else does work: **distance from 0.5** (blue). Keeping the most confident fifth gives
-about 97% accuracy against 60% for the least confident. So the proposal's question — *when
-should I trust this?* — has a good answer; it is simply not the one assumed.
+The proposal assumed a GP's predictive variance would be that signal, and would hand us an
+applicability domain for free: unfamiliar molecule, larger variance, less trustworthy
+prediction. **It does not.** Filtering by GP variance (red) leaves accuracy flat at 80% all the
+way across — discarding the "uncertain" nine tenths buys nothing. Correlation between variance
+and error is −0.09 to −0.02 across four splits.
+
+The claim has two links and only the first holds. GP variance does track *novelty* — it is a
+working stranger-detector. But on this task novelty is not what makes a prediction wrong, and
+that is the link that fails. Plausibly the unusual molecules are unusual *because* they carry
+an extreme group — a quaternary ammonium always flies, a sulfonic acid never does — which makes
+them strange and easy at once.
+
+Something else does work: **distance from 0.5** (blue), which climbs to nearly 100%. When the
+model says 95%, it is right; when it says 52%, it is guessing, and it says so. Keeping the most
+confident fifth gives about 97% accuracy against 60% for the least confident. So the proposal's
+question — *when should I trust this?* — has a good answer; it is simply not the one assumed.
+
+(The jitter at the far left is small numbers: past x = 0.02 only a few dozen compounds remain
+and one mistake moves the percentage several points.)
 
 Part of the reason is the dataset. Clustering at 0.4 Tanimoto leaves 7,067 clusters among
 11,353 compounds, 4,583 of them singletons. Random, cluster, scaffold and deliberately-hard
