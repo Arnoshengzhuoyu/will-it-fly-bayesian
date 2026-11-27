@@ -12,3 +12,7 @@ scikit-learn==1.9.1
 scipy==1.18.1
 torch==2.15.0
 xenosite-predict @ git+https://github.com/swamidasslab/xenosite-predict@baa0b4d442de62bd92ebec7a95eb63f02d7d62cd
+h5netcdf==1.8.3
+h5py==3.16.0
+nbclient==0.11.0
+nbconvert==7.17.2
