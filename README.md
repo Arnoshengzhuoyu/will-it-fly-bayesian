@@ -158,10 +158,10 @@ times per split. The shuffled fits average 0.49 — chance — and the luckiest 
 while the real model scores 0.85–0.87. Four to five standard deviations clear. Whatever the
 model learnt is in the labels, not in the plumbing.
 
-**Laplace against MCMC.** Models 1 and 2 were fitted both ways — Laplace approximation and NUTS
-(nutpie, 4 chains, 1000 draws). Sixteen runs, **zero divergences**, r̂ ≤ 1.006, and predictions
-agreeing to within 0.001 AUC. Laplace takes a second where MCMC takes five minutes, so the fast
-approximation is used throughout with the sampler as the audit.
+**Laplace against MCMC.** Every number here comes from the fast approximation, so it was checked
+against the slow one. Models 1 and 2 were fitted both ways — sixteen runs in all, with NUTS
+(nutpie, 4 chains, 1000 draws) as the reference. The two agree to within 0.001 AUC, with **zero
+divergences** and r̂ ≤ 1.006. Laplace takes a second; MCMC takes five minutes.
 
 **ARD earns its place exactly where there is dead weight to remove.** Against a fixed Gaussian
 prior, on the random split:
