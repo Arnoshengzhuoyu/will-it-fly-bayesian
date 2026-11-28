@@ -12,7 +12,7 @@ not know. Three Bayesian models, one dataset of 11,353 compounds measured on an 
 
 ### What we found
 
-1. **Every model ranks about equally well** — AUC 0.85–0.89, and cross-validation shows the
+1. **Every model ranks about equally well** — AUC 0.845–0.891, and cross-validation shows the
    differences between them are inside fold-to-fold noise.
 2. **They are not equally honest.** A random forest's calibration error is 0.106; the Bayesian
    models' are 0.041 and 0.050, and the gap holds in 10 folds out of 10.
@@ -46,7 +46,7 @@ Swamidass lab, and 2048-bit Morgan fingerprints.
 fingerprints carry structure the descriptors cannot name, the descriptors carry ionisation
 chemistry the fingerprints cannot express. Adding phase1 on top makes things worse — those
 descriptors were built to predict *metabolism*, which atom a liver enzyme attacks, and say
-nothing about whether a molecule holds a proton. (Method notes revisit how safe that screen is.)
+nothing about whether a molecule holds a proton.
 
 So Morgan + chemistry is the feature set to beat, and where it can be used it is what the
 models below are given. Model 3 is the exception: a Tanimoto kernel is defined on bit vectors,
