@@ -10,34 +10,50 @@ This project predicts flying from structure as a *calibrated probability* — no
 but a number a chemist can act on, with uncertainty that is honest about what the model does
 not know. Three Bayesian models, one dataset of 11,353 compounds measured on an Echo-MS.
 
-**The headline result is that calibration, not accuracy, is what separates these models.** All
-four candidates rank about equally well (AUC 0.85–0.88). They differ by a factor of three in
-whether their stated probabilities are true.
+**The headline result is that calibration, not accuracy, is what separates these models.** Every
+candidate ranks about equally well (AUC 0.85–0.89). They differ by a factor of three in whether
+their stated probabilities are true.
 
 ---
 
 ## Results
 
-Held-out test set, ammonium formate, ARD priors. Higher is better except for log loss and ECE.
+Held-out test set, ammonium formate. Higher is better except for log loss and ECE. Grouped by
+feature set, because a model and the features it is given cannot be compared separately.
 
-| Model | Features | AUC | MCC | log loss | ECE |
+| Features | Model | AUC | MCC | log loss | ECE |
 |---|---|---|---|---|---|
-| Random forest (baseline) | Morgan 2048 | 0.863 | 0.564 | 0.509 | — |
-| Random forest (best) | Morgan + chemistry | **0.885** | 0.593 | 0.472 | — |
-| **Model 1** — Bayesian logistic regression | chemistry (50) | 0.868 | 0.577 | 0.455 | **0.028** |
-| **Model 2** — censored (Tobit) regression | chemistry (50) | 0.849 | 0.514 | 0.490 | 0.049 |
-| **Model 3** — GP, Tanimoto kernel | Morgan 2048 | 0.879 | **0.595** | 0.455 | 0.072 |
+| chemistry (50) | Random forest | 0.846 | 0.511 | 0.486 | — |
+| chemistry (50) | **Model 1** — Bayesian logistic regression | 0.868 | 0.577 | 0.455 | **0.028** |
+| chemistry (50) | **Model 2** — censored (Tobit) regression | 0.849 | 0.514 | 0.490 | 0.049 |
+| Morgan 2048 | Random forest | 0.863 | 0.564 | 0.509 | — |
+| Morgan 2048 | Model 1 | 0.862 | 0.550 | 0.468 | 0.035 |
+| Morgan 2048 | **Model 3** — GP, Tanimoto kernel | 0.879 | 0.595 | 0.455 | 0.072 |
+| Morgan + chemistry | Random forest | 0.885 | 0.593 | 0.472 | 0.107 |
+| Morgan + chemistry | **Model 1** | **0.891** | **0.597** | **0.418** | 0.034 |
 
 **ECE** (expected calibration error) is the average gap between the probability a model
 announces and the frequency it achieves. 0.028 means that when the model says 70%, the truth is
-within about three points. AUC cannot measure this — it only sees ranking.
+within about three points. AUC cannot measure this — it only sees ranking, and a forest's vote
+share is not a probability at all.
+
+**Like for like, the Bayesian model wins on both counts.** On identical features Model 1 scores
+0.891 against the forest's 0.885 while announcing probabilities three times closer to the truth
+(ECE 0.034 against 0.107). The gap on ranking is small; the gap on honesty is not.
+
+The grouping matters. Read down a single column and Model 3's 0.879 looks like it beats
+Model 1's 0.868 — but those are different feature sets, and the forest rows show Morgan
+fingerprints are worth about +0.017 AUC over the chemistry features on their own. Nearly all of
+Model 3's apparent lead is the features, not the model.
 
 ![cross-validation](figures/06_validation__3-cross-validation.png)
 
-Five-fold cross-validation inside each training set, four different held-out schemes. Pairing
-fold by fold, **Model 1 has the higher AUC in 20 folds out of 20** (+0.013 ± 0.006) and the
-lower calibration error in 19 of 20 (−0.018 ± 0.012). The accuracy margin is small; the
-calibration margin is about half the error, consistently.
+Five-fold cross-validation inside each training set, four different held-out schemes, on the
+chemistry features. Pairing fold by fold — which cancels the difficulty the two models share —
+**Model 1 has the higher AUC in 20 folds out of 20** (+0.013 ± 0.006) and the lower calibration
+error in 19 of 20 (−0.018 ± 0.012). The accuracy margin is small; the calibration margin is
+about half the error, consistently. The single-split comparison on Morgan + chemistry above
+points the same way and further, but has no error bars.
 
 The honest summary is not *the Bayesian model predicts better*. It is: **it predicts a little
 better and it knows what it knows.** For a screen deciding which compounds are worth running,
@@ -130,9 +146,23 @@ best of 25 rather than the average.
 agreeing to within 0.001 AUC. Laplace takes a second where MCMC takes five minutes, so the fast
 approximation is used throughout with the sampler as the audit.
 
-**ARD against a fixed Gaussian prior** makes almost no difference (< 0.01 everywhere). That is
-the expected result for 50 hand-chosen features with no dead weight among them; ARD would have
-something to do on the 2048-bit fingerprints.
+**ARD earns its place exactly where there is dead weight to remove.** Against a fixed Gaussian
+prior, on the random split:
+
+| Features | Gaussian | ARD | |
+|---|---|---|---|
+| chemistry (50) | 0.868 / 0.456 | 0.868 / 0.455 | no difference |
+| Morgan 2048 | 0.832 / 0.582 | 0.862 / 0.468 | **+0.030 AUC** |
+| Morgan + chemistry | 0.854 / 0.574 | **0.891 / 0.418** | **+0.037 AUC** |
+
+(AUC / log loss.) On 50 hand-picked features ARD changes nothing, because none of them are
+useless — a fair prior and a learnt one agree. On 2048 fingerprint bits, most of which are
+noise for this task, learning a scale per feature is worth more than any other single choice in
+the project. Calibration moves even further: ECE 0.100 → 0.034.
+
+This is the proposal's step 3 — *ARD priors instead of stepwise selection* — doing what it was
+chosen for. Shrinking a useless coefficient towards zero while leaving its credible interval
+wide is not the same as deleting the feature, and it costs one fit rather than hundreds.
 
 ---
 
