@@ -255,13 +255,17 @@ The forest was used to screen all six combinations before anything slower was ru
 | **Morgan + chemistry** | 2098 | **0.885** | **0.866** |
 | all three | 2139 | 0.877 | 0.854 |
 
-The lab descriptors were the weakest set on their own and made the forest worse when added to
-the other two (0.885 → 0.877), so the screen dropped them and no Bayesian model was given them.
-That reasoning is weaker than it looks: a forest has no way to ignore a feature
-block that is mostly noise, which is precisely what ARD does, and ARD turned out to be worth
-+0.037 elsewhere. Whether the phase1 descriptors hold anything once ARD can discount them is an
-open question this project did not settle — the fit costs two minutes. They were built to
-predict metabolism, not ionisation, so the prior expectation is still that they carry little.
+The phase1 descriptors were dropped, and the reason is chemical before it is empirical: they
+were built to predict **metabolism** — which atom a liver enzyme attacks — and carry nothing
+about whether a molecule will hold a proton, which is what decides flying. The screen agrees:
+weakest alone, and actively harmful added to the other two (0.885 → 0.877). So no Bayesian model
+was given them.
+
+That empirical half is weaker than it looks. A forest has no way to ignore a feature block that
+is mostly noise, which is precisely what ARD does, and ARD turned out to be worth +0.037
+elsewhere. Whether phase1 holds anything once ARD can discount it is an open question this
+project did not settle — the fit costs two minutes. The chemical argument still says it will
+not, which is why the question stayed open rather than becoming a priority.
 
 ---
 
