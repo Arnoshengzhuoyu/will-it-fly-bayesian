@@ -75,6 +75,11 @@ the three blocks are three different questions.
 | Model 1 | 0.862 | 0.550 | 0.468 | 0.035 |
 | Model 3 — GP, Tanimoto kernel | 0.879 | 0.595 | 0.455 | 0.072 |
 
+Model 3 tops its own block on ranking and comes last in it on calibration. Note also that its
+0.879 is *not* comparable to the 0.891 in the first block: Morgan fingerprints alone are worth
+about +0.017 AUC over the chemistry features alone, so a number from one block carries its
+feature set with it.
+
 Only ECE is emboldened, and only because cross-validation (below) shows the AUC differences
 *inside* a block are smaller than the fold-to-fold spread. One split cannot separate these
 models on ranking. It can separate them on calibration. A forest has no ECE entry on the two
@@ -94,11 +99,6 @@ does not survive cross-validation, which reverses it to −0.005 ± 0.009 with t
 Calibration is not close. The forest's ECE is 0.106 against Model 1's 0.050 and Model 2's
 0.041, and Model 1 beats it in **10 folds out of 10**. A forest's vote share was never a
 probability; the Bayesian models' is.
-
-**The blocks are why Model 3 is not the winner it looks like.** Its 0.879 sits above Model 1's
-0.868 — but those are different blocks, and the forest rows show Morgan fingerprints alone are
-worth about +0.017 AUC over the chemistry features alone. The lead is the features. Inside its
-own block Model 3 does beat both others on ranking, and loses to both on calibration.
 
 ![cross-validation](figures/06_validation__3-cross-validation.png)
 
