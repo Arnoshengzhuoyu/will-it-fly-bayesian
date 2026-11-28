@@ -173,26 +173,17 @@ prior, on the random split:
 | Morgan + chemistry | Model 1 | 0.854 / 0.574 | **0.891 / 0.418** | **+0.037 AUC** |
 | Morgan + chemistry | Model 2 | 0.861 / 0.477 | 0.878 / 0.449 | +0.017 AUC |
 
-(AUC / log loss.) On 50 hand-picked features ARD changes nothing, because none of them are
-useless — a fair prior and a learnt one agree. On 2048 fingerprint bits, most of which are
-noise for this task, learning a scale per feature is worth more than any other single choice in
-the project. Calibration moves even further: ECE 0.100 → 0.034.
+(AUC / log loss.) On 50 hand-picked features nothing changes — none of them are useless. On
+2,048 fingerprint bits, mostly noise for this task, learning a scale per feature is the largest
+single gain in the project, and calibration moves further still (ECE 0.100 → 0.034). This is the
+proposal's step 3, *ARD instead of stepwise selection*, doing what it was chosen for, at the
+cost of one fit rather than hundreds.
 
-This is the proposal's step 3 — *ARD priors instead of stepwise selection* — doing what it was
-chosen for. Shrinking a useless coefficient towards zero while leaving its credible interval
-wide is not the same as deleting the feature, and it costs one fit rather than hundreds.
-
-ARD lifts Model 2 by less than half as much, and it stays behind Model 1 on identical features
-(0.878 against 0.891). So the censored model's gap is the model, not a missing prior — which is
-what it took running both to establish. Model 2 earns its keep elsewhere: it predicts the area
-itself, so a change of threshold costs no refit, and its RMSE improves from 0.590 to 0.541.
-
-Getting there needed an **analytic Hessian**. The first implementation took it by finite
-differences — 2(d+2) gradient evaluations, about 80 s at d = 2098, which made each ARD fit
-(twenty of them) half an hour and put the experiment out of reach. Every coefficient enters only
-through `mu = A @ beta`, so the whole block is `A' diag(h) A` for one scalar per row: 0.7 s
-instead of 80, with the two agreeing to 2e-11 on randomised tests including the no-censoring
-and heavily-censored edges.
+ARD lifts Model 2 by less than half as much and it stays behind Model 1 on the same features, so
+the censored model's gap is the model, not a missing prior. Running it at all needed an
+**analytic Hessian**: by finite differences each fit took 80 s at d = 2098, which put a
+twenty-round ARD fit at half an hour. Deriving it brought that to 0.7 s, matching finite
+differences to 2e-11.
 
 ---
 
