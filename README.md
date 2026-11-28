@@ -88,16 +88,6 @@ to be taken at face value.
 (Model 3's 0.879 was the project's best AUC until Model 1 was given the same features the forest
 preferred, which took it to 0.891. The GP's edge was the fingerprints, not the kernel.)
 
-Two things were wrong in the first implementation and are worth recording, because both looked
-fine while running:
-
-- the model was **fitted with a logistic likelihood but predicted through a probit link**. The
-  mismatch flattered the log loss (0.435 against 0.455) by accidentally compensating for the
-  underconfidence. Correcting it makes the score worse and the model honest.
-- the kernel's `bias` hyperparameter sat at the **edge of its search grid**, so the marginal
-  likelihood had never been allowed to choose. Widening the grid moved it from 0.5 to 4.0 and
-  confirmed that value as a true interior peak.
-
 ### 3. The applicability-domain claim does not survive contact with the data
 
 ![novelty versus error](figures/05_model3_gp__4-link-two-does-novelty-track-error.png)
