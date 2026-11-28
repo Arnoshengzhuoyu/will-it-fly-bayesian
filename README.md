@@ -116,36 +116,26 @@ understate the magnitude of the latent function.
 
 ![novelty versus error](figures/05_model3_gp__4-link-two-does-novelty-track-error.png)
 
-**How to read this**, right to left. The question it answers is the practical one: *I can only
-afford to run some of these compounds — can the model tell me which calls to trust?* At the
-right edge nothing is discarded and accuracy is 80%, the grey line. Moving left discards the
-predictions the model is least sure of, keeping only the most trusted. **A trust signal that
-works makes the line climb**: fewer compounds kept, higher accuracy among those left.
+**How to read this**, right to left: *I can only afford to run some of these compounds — can the
+model tell me which calls to trust?* At the right edge nothing is discarded, and accuracy is
+80%. Moving left keeps only the predictions the model is most sure of. **A trust signal that
+works makes the line climb.**
 
-The proposal assumed a GP's predictive variance would be that signal, and would hand us an
-applicability domain for free: unfamiliar molecule, larger variance, less trustworthy
-prediction. **It does not.** Filtering by GP variance (red) leaves accuracy flat at 80% all the
-way across — discarding the "uncertain" nine tenths buys nothing. Correlation between variance
-and error is −0.09 to −0.02 across four splits.
+The proposal assumed GP variance would be that signal — unfamiliar molecule, larger variance,
+less trustworthy prediction. **It is not.** The red line is flat: discarding the "uncertain"
+nine tenths buys nothing, and variance correlates with error at −0.09 to −0.02 across four
+splits. Variance does detect novelty; novelty just is not what makes a prediction wrong here.
+Plausibly the strange molecules are strange *because* they carry an extreme group — a quaternary
+ammonium always flies, a sulfonic acid never does — which makes them strange and easy at once.
 
-The claim has two links and only the first holds. GP variance does track *novelty* — it is a
-working stranger-detector. But on this task novelty is not what makes a prediction wrong, and
-that is the link that fails. Plausibly the unusual molecules are unusual *because* they carry
-an extreme group — a quaternary ammonium always flies, a sulfonic acid never does — which makes
-them strange and easy at once.
+**Distance from 0.5** (blue) does work, climbing to nearly 100%. Keeping the most confident
+fifth gives about 97% accuracy against 60% for the least confident. The proposal's question —
+*when should I trust this?* — has a good answer; it is not the one assumed.
 
-Something else does work: **distance from 0.5** (blue), which climbs to nearly 100%. When the
-model says 95%, it is right; when it says 52%, it is guessing, and it says so. Keeping the most
-confident fifth gives about 97% accuracy against 60% for the least confident. So the proposal's
-question — *when should I trust this?* — has a good answer; it is simply not the one assumed.
-
-(The jitter at the far left is small numbers: past x = 0.02 only a few dozen compounds remain
-and one mistake moves the percentage several points.)
-
-Part of the reason is the dataset. Clustering at 0.4 Tanimoto leaves 7,067 clusters among
-11,353 compounds, 4,583 of them singletons. Random, cluster, scaffold and deliberately-hard
-splits all land within 0.01 AUC of each other. **This library has no genuinely out-of-domain
-corner to fail on**, so it cannot demonstrate an applicability domain either way.
+The dataset limits what can be concluded either way. Clustering at 0.4 Tanimoto leaves 7,067
+clusters among 11,353 compounds, 4,583 of them singletons, and random, cluster, scaffold and
+deliberately-hard splits all land within 0.01 AUC of each other. **This library has no genuinely
+out-of-domain corner to fail on.**
 
 ---
 
