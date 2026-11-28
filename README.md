@@ -46,25 +46,40 @@ so continuous descriptors cannot enter it at all.
 
 ## Results
 
-Held-out test set, ammonium formate. Higher is better except for log loss and ECE. Grouped by
-feature set, because a model and the features it is given cannot be compared separately.
+Held-out test set, ammonium formate. Higher is better except for log loss and ECE. **Compare
+only within a block** — a model and the features it is given cannot be judged separately, and
+the three blocks are three different questions.
 
-| Features | Model | AUC | MCC | log loss | ECE |
-|---|---|---|---|---|---|
-| chemistry (50) | Random forest | 0.846 | 0.511 | 0.486 | — |
-| chemistry (50) | **Model 1** — Bayesian logistic regression | 0.868 | 0.577 | 0.455 | **0.028** |
-| chemistry (50) | **Model 2** — censored (Tobit) regression | 0.849 | 0.514 | 0.490 | 0.049 |
-| Morgan 2048 | Random forest | 0.863 | 0.564 | 0.509 | — |
-| Morgan 2048 | Model 1 | 0.862 | 0.550 | 0.468 | 0.035 |
-| Morgan 2048 | Model 2 | 0.845 | 0.515 | 0.499 | 0.051 |
-| Morgan 2048 | **Model 3** — GP, Tanimoto kernel | 0.879 | 0.595 | 0.455 | 0.072 |
-| Morgan + chemistry | Random forest | 0.885 | 0.593 | 0.472 | 0.107 |
-| Morgan + chemistry | Model 2 | 0.878 | 0.590 | 0.449 | **0.046** |
-| Morgan + chemistry | Model 1 | 0.891 | 0.597 | 0.418 | **0.034** |
+#### Morgan + chemistry — the feature set the screen chose
 
-Only the ECE column is emboldened, and only there because cross-validation (below) shows the
-AUC differences *within* a feature group are smaller than the fold-to-fold spread. One split
-cannot separate these models on ranking. It can separate them on calibration.
+| Model | AUC | MCC | log loss | ECE |
+|---|---|---|---|---|
+| Random forest | 0.885 | 0.593 | 0.472 | 0.107 |
+| Model 2 — censored (Tobit) regression | 0.878 | 0.590 | 0.449 | **0.046** |
+| Model 1 — Bayesian logistic regression | 0.891 | 0.597 | 0.418 | **0.034** |
+
+#### chemistry only (50 features) — the interpretable set
+
+| Model | AUC | MCC | log loss | ECE |
+|---|---|---|---|---|
+| Random forest | 0.846 | 0.511 | 0.486 | — |
+| Model 2 | 0.849 | 0.514 | 0.490 | 0.049 |
+| Model 1 | 0.868 | 0.577 | 0.455 | **0.028** |
+
+#### Morgan only (2048 bits) — the only set a Tanimoto kernel accepts
+
+| Model | AUC | MCC | log loss | ECE |
+|---|---|---|---|---|
+| Random forest | 0.863 | 0.564 | 0.509 | — |
+| Model 2 | 0.845 | 0.515 | 0.499 | 0.051 |
+| Model 1 | 0.862 | 0.550 | 0.468 | 0.035 |
+| Model 3 — GP, Tanimoto kernel | 0.879 | 0.595 | 0.455 | 0.072 |
+
+Only ECE is emboldened, and only because cross-validation (below) shows the AUC differences
+*inside* a block are smaller than the fold-to-fold spread. One split cannot separate these
+models on ranking. It can separate them on calibration. A forest has no ECE entry on the two
+narrower sets because those runs predate the measure; the Morgan + chemistry row has it, and it
+is the row that matters.
 
 **ECE** (expected calibration error) is the average gap between the probability a model
 announces and the frequency it achieves. 0.028 means that when the model says 70%, the truth is
@@ -80,10 +95,10 @@ Calibration is not close. The forest's ECE is 0.106 against Model 1's 0.050 and 
 0.041, and Model 1 beats it in **10 folds out of 10**. A forest's vote share was never a
 probability; the Bayesian models' is.
 
-The grouping matters. Read down a single column and Model 3's 0.879 looks like it beats
-Model 1's 0.868 — but those are different feature sets, and the forest rows show Morgan
-fingerprints are worth about +0.017 AUC over the chemistry features on their own. Nearly all of
-Model 3's apparent lead is the features, not the model.
+**The blocks are why Model 3 is not the winner it looks like.** Its 0.879 sits above Model 1's
+0.868 — but those are different blocks, and the forest rows show Morgan fingerprints alone are
+worth about +0.017 AUC over the chemistry features alone. The lead is the features. Inside its
+own block Model 3 does beat both others on ranking, and loses to both on calibration.
 
 ![cross-validation](figures/06_validation__3-cross-validation.png)
 
