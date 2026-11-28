@@ -16,6 +16,34 @@ whether their stated probabilities are true.
 
 ---
 
+## Choosing the features first
+
+A model can only be as good as what it is shown, so the cheap model went first: a random forest
+over every combination of three feature blocks — 50 interpretable chemistry features (SMARTS
+counts for ionisable groups plus RDKit descriptors), 41 XenoSite phase1 descriptors from the
+Swamidass lab, and 2048-bit Morgan fingerprints.
+
+| Feature set | Columns | AUC (random) | AUC (cluster) |
+|---|---|---|---|
+| phase1 | 41 | 0.834 | 0.819 |
+| chemistry | 50 | 0.846 | 0.838 |
+| Morgan | 2048 | 0.863 | 0.838 |
+| chemistry + phase1 | 87 | 0.862 | 0.844 |
+| **Morgan + chemistry** | 2098 | **0.885** | **0.866** |
+| all three | 2139 | 0.877 | 0.854 |
+
+**Morgan + chemistry wins**, and the two blocks are complementary rather than redundant: the
+fingerprints carry structure the descriptors cannot name, the descriptors carry ionisation
+chemistry the fingerprints cannot express. Adding phase1 on top makes things worse — those
+descriptors were built to predict *metabolism*, which atom a liver enzyme attacks, and say
+nothing about whether a molecule holds a proton. (Method notes revisit how safe that screen is.)
+
+So Morgan + chemistry is the feature set to beat, and where it can be used it is what the
+models below are given. Model 3 is the exception: a Tanimoto kernel is defined on bit vectors,
+so continuous descriptors cannot enter it at all.
+
+---
+
 ## Results
 
 Held-out test set, ammonium formate. Higher is better except for log loss and ECE. Grouped by
@@ -240,32 +268,13 @@ data release — different compounds, so no training data is reused. Noise grows
 σ = 0.033 at log₁₀ area 5, 0.078 at log₁₀ area 2. Keeping this apart from the model's own error
 is what lets the detection probability be recomputed for any threshold without refitting.
 
-**Features.** Three blocks: 50 interpretable chemistry features (SMARTS counts for ionisable
-groups plus RDKit descriptors), 41 XenoSite phase1 descriptors from the Swamidass lab, and
-2048-bit Morgan fingerprints.
-
-The forest was used to screen all six combinations before anything slower was run:
-
-| Feature set | Columns | AUC (random) | AUC (cluster) |
-|---|---|---|---|
-| phase1 | 41 | 0.834 | 0.819 |
-| chemistry | 50 | 0.846 | 0.838 |
-| Morgan | 2048 | 0.863 | 0.838 |
-| chemistry + phase1 | 87 | 0.862 | 0.844 |
-| **Morgan + chemistry** | 2098 | **0.885** | **0.866** |
-| all three | 2139 | 0.877 | 0.854 |
-
-The phase1 descriptors were dropped, and the reason is chemical before it is empirical: they
-were built to predict **metabolism** — which atom a liver enzyme attacks — and carry nothing
-about whether a molecule will hold a proton, which is what decides flying. The screen agrees:
-weakest alone, and actively harmful added to the other two (0.885 → 0.877). So no Bayesian model
-was given them.
-
-That empirical half is weaker than it looks. A forest has no way to ignore a feature block that
-is mostly noise, which is precisely what ARD does, and ARD turned out to be worth +0.037
-elsewhere. Whether phase1 holds anything once ARD can discount it is an open question this
-project did not settle — the fit costs two minutes. The chemical argument still says it will
-not, which is why the question stayed open rather than becoming a priority.
+**How safe is the feature screen?** The table above rests on one model's judgement, and a forest
+has no way to ignore a feature block that is mostly noise — which is precisely what ARD does,
+and ARD turned out to be worth +0.037 elsewhere. So "phase1 hurts" is really "phase1 hurts a
+forest". Whether it holds anything once ARD can discount it is an open question this project did
+not settle; the fit costs two minutes. The chemical argument — descriptors built for metabolism,
+not ionisation — still says it will not, which is why the question stayed open rather than
+becoming a priority.
 
 ---
 
