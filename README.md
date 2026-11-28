@@ -158,10 +158,6 @@ times per split. The shuffled fits average 0.49 — chance — and the luckiest 
 while the real model scores 0.85–0.87. Four to five standard deviations clear. Whatever the
 model learnt is in the labels, not in the plumbing.
 
-The spread matters as much as the mean here: 50 free coefficients fitted to noise can land on a
-direction that correlates with the truth by luck, which is why the check compares against the
-best of 25 rather than the average.
-
 **Laplace against MCMC.** Models 1 and 2 were fitted both ways — Laplace approximation and NUTS
 (nutpie, 4 chains, 1000 draws). Sixteen runs, **zero divergences**, r̂ ≤ 1.006, and predictions
 agreeing to within 0.001 AUC. Laplace takes a second where MCMC takes five minutes, so the fast
