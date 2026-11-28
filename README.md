@@ -10,9 +10,19 @@ This project predicts flying from structure as a *calibrated probability* — no
 but a number a chemist can act on, with uncertainty that is honest about what the model does
 not know. Three Bayesian models, one dataset of 11,353 compounds measured on an Echo-MS.
 
-**The headline result is that calibration, not accuracy, is what separates these models.** Every
-candidate ranks about equally well (AUC 0.845–0.891). They differ by a factor of three in
-whether their stated probabilities are true.
+### What we found
+
+1. **Every model ranks about equally well** — AUC 0.85–0.89, and cross-validation shows the
+   differences between them are inside fold-to-fold noise.
+2. **They are not equally honest.** A random forest's calibration error is 0.106; the Bayesian
+   models' are 0.041 and 0.050, and the gap holds in 10 folds out of 10.
+3. **The GP's uncertainty does not mark its mistakes**, so it cannot serve as the applicability
+   domain the proposal assumed. How far the predicted probability sits from 0.5 does work.
+4. **ARD matters when there is dead weight.** On 50 chosen features it changes nothing; on 2,048
+   fingerprint bits it is worth +0.037 AUC, the largest single gain in the project.
+
+So: these models do not predict better than a forest. They predict about as well and they know
+what they know — which is what a screen deciding where to spend instrument time actually needs.
 
 ---
 
@@ -46,86 +56,36 @@ so continuous descriptors cannot enter it at all.
 
 ## Results
 
-Held-out test set, ammonium formate. Higher is better except for log loss and ECE. **Compare
-only within a block** — a model and the features it is given cannot be judged separately, and
-the three blocks are three different questions.
+Five-fold cross-validation on Morgan + chemistry, the feature set the screen chose. Higher is
+better for AUC, lower for ECE.
 
-#### Morgan + chemistry — the feature set the screen chose
-
-| Model | AUC | MCC | log loss | ECE |
-|---|---|---|---|---|
-| Random forest | 0.885 | 0.593 | 0.472 | 0.107 |
-| Model 2 — censored (Tobit) regression | 0.878 | 0.590 | 0.449 | **0.046** |
-| Model 1 — Bayesian logistic regression | 0.891 | 0.597 | 0.418 | **0.034** |
-
-#### chemistry only (50 features) — the interpretable set
-
-| Model | AUC | MCC | log loss | ECE |
-|---|---|---|---|---|
-| Random forest | 0.846 | 0.511 | 0.486 | — |
-| Model 2 | 0.849 | 0.514 | 0.490 | 0.049 |
-| Model 1 | 0.868 | 0.577 | 0.455 | **0.028** |
-
-#### Morgan only (2048 bits) — the only set a Tanimoto kernel accepts
-
-| Model | AUC | MCC | log loss | ECE |
-|---|---|---|---|---|
-| Random forest | 0.863 | 0.564 | 0.509 | — |
-| Model 2 | 0.845 | 0.515 | 0.499 | 0.051 |
-| Model 1 | 0.862 | 0.550 | 0.468 | 0.035 |
-| Model 3 — GP, Tanimoto kernel | 0.879 | 0.595 | 0.455 | 0.072 |
-
-Model 3 tops its own block on ranking and comes last in it on calibration. Note also that its
-0.879 is *not* comparable to the 0.891 in the first block: Morgan fingerprints alone are worth
-about +0.017 AUC over the chemistry features alone, so a number from one block carries its
-feature set with it.
-
-Only ECE is emboldened, and only because cross-validation (below) shows the AUC differences
-*inside* a block are smaller than the fold-to-fold spread. One split cannot separate these
-models on ranking. It can separate them on calibration. A forest has no ECE entry on the two
-narrower sets because those runs predate the measure; the Morgan + chemistry row has it, and it
-is the row that matters.
-
-**ECE** (expected calibration error) is the average gap between the probability a model
-announces and the frequency it achieves. 0.028 means that when the model says 70%, the truth is
-within about three points. AUC cannot measure this — it only sees ranking, and a forest's vote
-share is not a probability at all.
-
-**Like for like, the forest ranks marginally better and is badly calibrated.** On identical
-features the single split above has Model 1 at 0.891 against the forest's 0.885 — but that gap
-does not survive cross-validation, which reverses it to −0.005 ± 0.009 with the forest ahead in
-7 folds of 10. On ranking these two are the same model to within noise.
-
-Calibration is not close. The forest's ECE is 0.106 against Model 1's 0.050 and Model 2's
-0.041, and Model 1 beats it in **10 folds out of 10**. A forest's vote share was never a
-probability; the Bayesian models' is.
+| Model | AUC | ECE |
+|---|---|---|
+| Random forest | 0.878 ± 0.004 | 0.106 ± 0.003 |
+| Model 1 — Bayesian logistic regression | 0.876 ± 0.010 | 0.050 ± 0.016 |
+| Model 2 — censored (Tobit) regression | 0.871 ± 0.005 | **0.041 ± 0.012** |
 
 ![cross-validation](figures/06_validation__3-cross-validation.png)
 
-Five-fold cross-validation inside each training set, on Morgan + chemistry — the feature set the
-screen chose, so the error bars belong to the headline numbers rather than to a side experiment.
-Pairing fold by fold cancels the difficulty each fold shares between models:
+**On AUC the error bars overlap; on ECE they do not come close.** That is the whole result.
+Pairing fold by fold, Model 1 beats the forest on calibration in 10 folds out of 10 and on
+ranking in only 3.
 
-| Model 1 minus | AUC | ECE | folds Model 1 wins |
-|---|---|---|---|
-| Random forest | −0.005 ± 0.009 | **−0.053 ± 0.015** | 3/10 on AUC, **10/10 on ECE** |
-| Model 2 | +0.005 ± 0.004 | +0.009 ± 0.017 | 9/10 on AUC, 2/10 on ECE |
+**ECE** (expected calibration error) is the average gap between the probability a model
+announces and the frequency it achieves. 0.04 means that when the model says 70%, the truth is
+within about four points. AUC cannot measure this — it only sees ranking, and a forest's vote
+share is not a probability at all.
 
-**This overturns the single-split reading.** On one split Model 1 looked 0.006 ahead of the
-forest; across ten folds the forest is 0.005 ahead, and the spread is twice either number. The
-ranking difference was noise, and it took the folds to see that.
+Two things are worth noticing. **Model 2 is the best calibrated** even though it ranks last:
+modelling the peak area and deriving a probability from it beats modelling the yes/no answer
+directly. And **a single split would have misled us** — on one split Model 1 looked 0.006 ahead
+of the forest on AUC, where ten folds put the forest 0.005 ahead. The spread is twice either
+number, so that difference was never real.
 
-What is not noise is calibration: 10 folds out of 10, by about half the error. And Model 2,
-which ranks slightly behind Model 1, is the best-calibrated of the three (ECE 0.041) — modelling
-the peak area and deriving the probability from it beats modelling the yes/no answer directly.
-
-So the honest summary is not *the Bayesian models predict better*. It is: **they predict about
-as well and they know what they know.** For a screen deciding which compounds are worth running,
-the second property is the one worth paying for.
-
-(The same comparison on the 50 chemistry features alone, across all four splits, puts Model 1
-ahead on both counts — 20 folds of 20 on AUC. Narrow feature sets suit the linear model; wide
-ones suit the forest. `data/processed/validation_cv.csv` holds both.)
+Model 3 is absent here because a Tanimoto kernel only accepts bit vectors, so it cannot be given
+this feature set. On Morgan fingerprints alone it ranks best of the four (AUC 0.879) and
+calibrates worst (ECE 0.072) — the finding in §2 below. Per-model numbers on every feature set
+are in [the method notes](#every-feature-set).
 
 ---
 
@@ -305,6 +265,31 @@ Stereoisomers are kept together throughout, so a pair never straddles train and 
 data release — different compounds, so no training data is reused. Noise grows as signal falls:
 σ = 0.033 at log₁₀ area 5, 0.078 at log₁₀ area 2. Keeping this apart from the model's own error
 is what lets the detection probability be recomputed for any threshold without refitting.
+
+### Every feature set
+
+Single held-out split, ammonium formate, ARD priors. Compare only within a block — a number
+carries its feature set with it, and Morgan fingerprints alone are worth about +0.017 AUC over
+the chemistry features alone.
+
+| Features | Model | AUC | MCC | log loss | ECE |
+|---|---|---|---|---|---|
+| Morgan + chemistry | Random forest | 0.885 | 0.593 | 0.472 | 0.107 |
+| Morgan + chemistry | Model 1 | 0.891 | 0.597 | 0.418 | 0.034 |
+| Morgan + chemistry | Model 2 | 0.878 | 0.590 | 0.449 | 0.046 |
+| chemistry (50) | Random forest | 0.846 | 0.511 | 0.486 | — |
+| chemistry (50) | Model 1 | 0.868 | 0.577 | 0.455 | 0.028 |
+| chemistry (50) | Model 2 | 0.849 | 0.514 | 0.490 | 0.049 |
+| Morgan (2048) | Random forest | 0.863 | 0.564 | 0.509 | — |
+| Morgan (2048) | Model 1 | 0.862 | 0.550 | 0.468 | 0.035 |
+| Morgan (2048) | Model 2 | 0.845 | 0.515 | 0.499 | 0.051 |
+| Morgan (2048) | Model 3 | 0.879 | 0.595 | 0.455 | 0.072 |
+
+These are single splits, so the AUC differences inside a block are inside the noise the
+cross-validation measures. The ECE differences are not. On the 50 chemistry features alone,
+across four splits, Model 1 does beat the forest on both counts (20 folds of 20 on AUC): narrow,
+meaningful features suit a linear model, while 2,048 raw bits give the forest interactions to
+find. Both runs are in `data/processed/validation_cv.csv`.
 
 **How safe is the feature screen?** The table above rests on one model's judgement, and a forest
 has no way to ignore a feature block that is mostly noise — which is precisely what ARD does,
