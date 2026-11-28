@@ -11,8 +11,8 @@ but a number a chemist can act on, with uncertainty that is honest about what th
 not know. Three Bayesian models, one dataset of 11,353 compounds measured on an Echo-MS.
 
 **The headline result is that calibration, not accuracy, is what separates these models.** Every
-candidate ranks about equally well (AUC 0.85–0.89). They differ by a factor of three in whether
-their stated probabilities are true.
+candidate ranks about equally well (AUC 0.845–0.891). They differ by a factor of three in
+whether their stated probabilities are true.
 
 ---
 
@@ -77,11 +77,16 @@ The credible intervals carry information a point estimate cannot. `n_phosphonic_
 −2.2 to +1.5 — the library holds too few phosphonic acids to say anything about them. A random
 forest would report an importance for that feature and give no hint that it is meaningless.
 
-### 2. The GP ranks best and is calibrated worst
+### 2. The GP is the worst-calibrated model of the three
 
-Model 3 wins on AUC and MCC and comes last on ECE, by a factor of nearly three. This is the
-Laplace approximation for GP classification understating the magnitude of the latent function,
-visible as a number: the probabilities sit too close to 0.5 to be taken at face value.
+On its own feature set Model 3 ranks well — 0.879 AUC, the best of anything fitted on Morgan
+fingerprints alone — but its ECE of 0.072 is nearly three times Model 1's, the worst of the
+three models. This is the Laplace approximation for GP classification understating the
+magnitude of the latent function, visible as a number: the probabilities sit too close to 0.5
+to be taken at face value.
+
+(Model 3's 0.879 was the project's best AUC until Model 1 was given the same features the forest
+preferred, which took it to 0.891. The GP's edge was the fingerprints, not the kernel.)
 
 Two things were wrong in the first implementation and are worth recording, because both looked
 fine while running:
