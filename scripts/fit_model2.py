@@ -193,7 +193,7 @@ def fit_laplace(X, z, cens, limit, prior_type, s_meas2):
                                 method="L-BFGS-B", options={"maxiter": 1000})
         w = res.x
         if prior_type == "ard":
-            H = hessian_fd(w, A, z, cens, limit, prec, s_meas2)
+            H = hessian(w, A, z, cens, limit, prec, s_meas2)
             var_b = np.clip(np.diag(np.linalg.inv(H))[1:-1], 1e-12, None)
             new = 1.0 / np.clip(w[1:-1] ** 2 + var_b, 1e-8, None)
             if np.allclose(new, prec, rtol=1e-3):
@@ -201,12 +201,14 @@ def fit_laplace(X, z, cens, limit, prior_type, s_meas2):
                 break
             prec = new
 
-    H = hessian_fd(w, A, z, cens, limit, prec, s_meas2)
+    H = hessian(w, A, z, cens, limit, prec, s_meas2)
     return {"mean": w, "cov": np.linalg.inv(H), "prec": prec, "limit": limit}
 
 
 def hessian_fd(w, *args, eps=1e-5):
-    """Hessian by finite differences of the analytic gradient."""
+    """Hessian by finite differences of the analytic gradient. Reference implementation:
+    correct, and far too slow to use on wide feature sets -- it costs 2(d+2) gradient
+    evaluations, which is ~80 s at d = 2098 and makes an ARD fit (20 of these) half an hour."""
     n = len(w)
     H = np.zeros((n, n))
     for i in range(n):
@@ -214,6 +216,63 @@ def hessian_fd(w, *args, eps=1e-5):
         wp[i] += eps
         wm[i] -= eps
         H[i] = (grad_neg_log_post(wp, *args) - grad_neg_log_post(wm, *args)) / (2 * eps)
+    return 0.5 * (H + H.T)
+
+
+def hessian(w, A, z, cens, limit, prec, s_meas2):
+    """Exact Hessian of the negative log posterior, in one pass.
+
+    Every coefficient enters only through mu = A @ beta, so the whole d x d block is
+    A' diag(h_mu_mu) A for one scalar per row -- no loop over parameters. Writing t for
+    log s_model and v for the per-row variance e^{2t} + s_meas^2:
+
+        d(beta_j, beta_k) = sum_i  h_mm[i] A[i,j] A[i,k]
+        d(beta_j, t)      = sum_i  h_mt[i] A[i,j]
+        d(t, t)           = sum_i  h_tt[i]
+
+    with the three row scalars below. For a censored row the likelihood is log Phi(u),
+    u = (limit - mu)/sqrt(v), whose derivatives come from lam = phi(u)/Phi(u) and
+    dlam/du = -lam(u + lam).
+
+    Cost is one n x d x d product (seconds at d = 2098) instead of 2(d+2) gradients.
+    """
+    beta, lsm = _unpack(w)
+    mu = A @ beta
+    v = np.exp(2.0 * lsm) + s_meas2
+    g = 2.0 * np.exp(2.0 * lsm)          # dv/dt;  d2v/dt2 = 2g
+
+    h_mm = np.zeros_like(mu)             # d2 ll / dmu2
+    h_mv = np.zeros_like(mu)             # d2 ll / dmu dv
+    h_vv = np.zeros_like(mu)             # d2 ll / dv2
+    d_v = np.zeros_like(mu)              # d ll / dv   (needed for the d2v/dt2 term)
+
+    obs = ~cens
+    r = z[obs] - mu[obs]
+    vo = v[obs]
+    h_mm[obs] = -1.0 / vo
+    h_mv[obs] = -r / vo ** 2
+    h_vv[obs] = -r ** 2 / vo ** 3 + 0.5 / vo ** 2
+    d_v[obs] = 0.5 * r ** 2 / vo ** 2 - 0.5 / vo
+
+    if cens.any():
+        vc = v[cens]
+        u = (limit - mu[cens]) / np.sqrt(vc)
+        lam = np.exp(stats.norm.logpdf(u) - stats.norm.logcdf(u))
+        D = -lam * (u + lam)                             # dlam/du
+        h_mm[cens] = D / vc
+        h_mv[cens] = (D * u + lam) / (2.0 * vc ** 1.5)
+        h_vv[cens] = u * (D * u + 3.0 * lam) / (4.0 * vc ** 2)
+        d_v[cens] = -lam * u / (2.0 * vc)
+
+    h_mt = h_mv * g
+    h_tt = h_vv * g ** 2 + d_v * 2.0 * g
+
+    n, p = A.shape
+    H = np.empty((p + 1, p + 1))
+    H[:p, :p] = -(A.T @ (A * h_mm[:, None]))             # negative log posterior
+    H[:p, p] = H[p, :p] = -(A.T @ h_mt)
+    H[p, p] = -h_tt.sum() + 1.0                          # + prior on log s_model
+    H[np.arange(1, p), np.arange(1, p)] += prec          # + prior on beta (not the intercept)
     return 0.5 * (H + H.T)
 
 

@@ -28,8 +28,10 @@ feature set, because a model and the features it is given cannot be compared sep
 | chemistry (50) | **Model 2** — censored (Tobit) regression | 0.849 | 0.514 | 0.490 | 0.049 |
 | Morgan 2048 | Random forest | 0.863 | 0.564 | 0.509 | — |
 | Morgan 2048 | Model 1 | 0.862 | 0.550 | 0.468 | 0.035 |
+| Morgan 2048 | Model 2 | 0.845 | 0.515 | 0.499 | 0.051 |
 | Morgan 2048 | **Model 3** — GP, Tanimoto kernel | 0.879 | 0.595 | 0.455 | 0.072 |
 | Morgan + chemistry | Random forest | 0.885 | 0.593 | 0.472 | 0.107 |
+| Morgan + chemistry | Model 2 | 0.878 | 0.590 | 0.449 | 0.046 |
 | Morgan + chemistry | **Model 1** | **0.891** | **0.597** | **0.418** | 0.034 |
 
 **ECE** (expected calibration error) is the average gap between the probability a model
@@ -149,11 +151,12 @@ approximation is used throughout with the sampler as the audit.
 **ARD earns its place exactly where there is dead weight to remove.** Against a fixed Gaussian
 prior, on the random split:
 
-| Features | Gaussian | ARD | |
-|---|---|---|---|
-| chemistry (50) | 0.868 / 0.456 | 0.868 / 0.455 | no difference |
-| Morgan 2048 | 0.832 / 0.582 | 0.862 / 0.468 | **+0.030 AUC** |
-| Morgan + chemistry | 0.854 / 0.574 | **0.891 / 0.418** | **+0.037 AUC** |
+| Features | | Gaussian | ARD | |
+|---|---|---|---|---|
+| chemistry (50) | Model 1 | 0.868 / 0.456 | 0.868 / 0.455 | no difference |
+| Morgan 2048 | Model 1 | 0.832 / 0.582 | 0.862 / 0.468 | **+0.030 AUC** |
+| Morgan + chemistry | Model 1 | 0.854 / 0.574 | **0.891 / 0.418** | **+0.037 AUC** |
+| Morgan + chemistry | Model 2 | 0.861 / 0.477 | 0.878 / 0.449 | +0.017 AUC |
 
 (AUC / log loss.) On 50 hand-picked features ARD changes nothing, because none of them are
 useless — a fair prior and a learnt one agree. On 2048 fingerprint bits, most of which are
@@ -163,6 +166,18 @@ the project. Calibration moves even further: ECE 0.100 → 0.034.
 This is the proposal's step 3 — *ARD priors instead of stepwise selection* — doing what it was
 chosen for. Shrinking a useless coefficient towards zero while leaving its credible interval
 wide is not the same as deleting the feature, and it costs one fit rather than hundreds.
+
+ARD lifts Model 2 by less than half as much, and it stays behind Model 1 on identical features
+(0.878 against 0.891). So the censored model's gap is the model, not a missing prior — which is
+what it took running both to establish. Model 2 earns its keep elsewhere: it predicts the area
+itself, so a change of threshold costs no refit, and its RMSE improves from 0.590 to 0.541.
+
+Getting there needed an **analytic Hessian**. The first implementation took it by finite
+differences — 2(d+2) gradient evaluations, about 80 s at d = 2098, which made each ARD fit
+(twenty of them) half an hour and put the experiment out of reach. Every coefficient enters only
+through `mu = A @ beta`, so the whole block is `A' diag(h) A` for one scalar per row: 0.7 s
+instead of 80, with the two agreeing to 2e-11 on randomised tests including the no-censoring
+and heavily-censored edges.
 
 ---
 
