@@ -273,12 +273,6 @@ across four splits, Model 1 does beat the forest on both counts (20 folds of 20 
 meaningful features suit a linear model, while 2,048 raw bits give the forest interactions to
 find. Both runs are in `data/processed/validation_cv.csv`.
 
-**How safe is the feature screen?** It rests on one model, and a forest cannot ignore a block of
-mostly-noise features the way ARD can. So "phase1 hurts" is really "phase1 hurts a forest",
-and whether ARD would rescue it is an open question — a two-minute fit this project did not run.
-The chemical argument says it would not: those descriptors were built for metabolism, not
-ionisation.
-
 ---
 
 ## References
