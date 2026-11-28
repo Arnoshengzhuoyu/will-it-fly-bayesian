@@ -109,15 +109,9 @@ On its own feature set Model 3 ranks well — 0.879 AUC, the best of anything fi
 fingerprints alone — but its ECE of 0.072 is nearly three times Model 1's, the worst of the
 three models. The probabilities sit too close to 0.5 to be taken at face value.
 
-The cause is the Laplace approximation for GP classification understating the magnitude of the
-latent function, and the model can be made to show this. MacKay's approximation squashes the
-latent mean through a logistic sigmoid, matching the likelihood the GP was fitted with. Swapping
-in a probit — a steeper curve, and the wrong one — *improves* the log loss, 0.455 to 0.435,
-because a steeper link compensates for latent values that are too small. A correctly specified
-model has no such slack to exploit. The reported numbers use the logistic link throughout.
-
-(Model 3's 0.879 was the project's best AUC until Model 1 was given the same features the forest
-preferred, which took it to 0.891. The GP's edge was the fingerprints, not the kernel.)
+The likely cause is the Laplace approximation for GP classification, which is known to
+understate the magnitude of the latent function. EP is the standard remedy and the proposal
+named it ("Laplace/EP"); it was not implemented here.
 
 ### 3. The applicability-domain claim does not survive contact with the data
 
