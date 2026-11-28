@@ -250,8 +250,10 @@ Model 2 treats them as left-censored rather than pretending to a value.
 scaffold, and a deliberately hard split taking the 20% least similar to the rest of the library.
 Stereoisomers are kept together throughout, so a pair never straddles train and test.
 
-**Measurement noise (Model 2).** Fitted from 2,444 groups of replicate control wells in the same
-data release — different compounds, so no training data is reused. Noise grows as signal falls:
+**Measurement noise (Model 2).** Fitted from `reactivity_wells.tsv` in the same Zenodo release:
+its no-enzyme control wells run each compound 3–4 times on the same instrument, so the spread
+within a group is measurement noise and nothing else. That gives 2,444 groups, on compounds
+outside the Will It Fly set, so no training data is reused. Noise grows as signal falls:
 σ = 0.033 at log₁₀ area 5, 0.078 at log₁₀ area 2. Keeping this apart from the model's own error
 is what lets the detection probability be recomputed for any threshold without refitting.
 
