@@ -110,8 +110,7 @@ fingerprints alone — but its ECE of 0.072 is nearly three times Model 1's, the
 three models. The probabilities sit too close to 0.5 to be taken at face value.
 
 The likely cause is the Laplace approximation for GP classification, which is known to
-understate the magnitude of the latent function. EP is the standard remedy and the proposal
-named it ("Laplace/EP"); it was not implemented here.
+understate the magnitude of the latent function.
 
 ### 3. The applicability-domain claim does not survive contact with the data
 
