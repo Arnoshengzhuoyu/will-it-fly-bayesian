@@ -59,17 +59,26 @@ feature set, because a model and the features it is given cannot be compared sep
 | Morgan 2048 | Model 2 | 0.845 | 0.515 | 0.499 | 0.051 |
 | Morgan 2048 | **Model 3** — GP, Tanimoto kernel | 0.879 | 0.595 | 0.455 | 0.072 |
 | Morgan + chemistry | Random forest | 0.885 | 0.593 | 0.472 | 0.107 |
-| Morgan + chemistry | Model 2 | 0.878 | 0.590 | 0.449 | 0.046 |
-| Morgan + chemistry | **Model 1** | **0.891** | **0.597** | **0.418** | 0.034 |
+| Morgan + chemistry | Model 2 | 0.878 | 0.590 | 0.449 | **0.046** |
+| Morgan + chemistry | Model 1 | 0.891 | 0.597 | 0.418 | **0.034** |
+
+Only the ECE column is emboldened, and only there because cross-validation (below) shows the
+AUC differences *within* a feature group are smaller than the fold-to-fold spread. One split
+cannot separate these models on ranking. It can separate them on calibration.
 
 **ECE** (expected calibration error) is the average gap between the probability a model
 announces and the frequency it achieves. 0.028 means that when the model says 70%, the truth is
 within about three points. AUC cannot measure this — it only sees ranking, and a forest's vote
 share is not a probability at all.
 
-**Like for like, the Bayesian model wins on both counts.** On identical features Model 1 scores
-0.891 against the forest's 0.885 while announcing probabilities three times closer to the truth
-(ECE 0.034 against 0.107). The gap on ranking is small; the gap on honesty is not.
+**Like for like, the forest ranks marginally better and is badly calibrated.** On identical
+features the single split above has Model 1 at 0.891 against the forest's 0.885 — but that gap
+does not survive cross-validation, which reverses it to −0.005 ± 0.009 with the forest ahead in
+7 folds of 10. On ranking these two are the same model to within noise.
+
+Calibration is not close. The forest's ECE is 0.106 against Model 1's 0.050 and Model 2's
+0.041, and Model 1 beats it in **10 folds out of 10**. A forest's vote share was never a
+probability; the Bayesian models' is.
 
 The grouping matters. Read down a single column and Model 3's 0.879 looks like it beats
 Model 1's 0.868 — but those are different feature sets, and the forest rows show Morgan
@@ -78,16 +87,30 @@ Model 3's apparent lead is the features, not the model.
 
 ![cross-validation](figures/06_validation__3-cross-validation.png)
 
-Five-fold cross-validation inside each training set, four different held-out schemes, on the
-chemistry features. Pairing fold by fold — which cancels the difficulty the two models share —
-**Model 1 has the higher AUC in 20 folds out of 20** (+0.013 ± 0.006) and the lower calibration
-error in 19 of 20 (−0.018 ± 0.012). The accuracy margin is small; the calibration margin is
-about half the error, consistently. The single-split comparison on Morgan + chemistry above
-points the same way and further, but has no error bars.
+Five-fold cross-validation inside each training set, on Morgan + chemistry — the feature set the
+screen chose, so the error bars belong to the headline numbers rather than to a side experiment.
+Pairing fold by fold cancels the difficulty each fold shares between models:
 
-The honest summary is not *the Bayesian model predicts better*. It is: **it predicts a little
-better and it knows what it knows.** For a screen deciding which compounds are worth running,
+| Model 1 minus | AUC | ECE | folds Model 1 wins |
+|---|---|---|---|
+| Random forest | −0.005 ± 0.009 | **−0.053 ± 0.015** | 3/10 on AUC, **10/10 on ECE** |
+| Model 2 | +0.005 ± 0.004 | +0.009 ± 0.017 | 9/10 on AUC, 2/10 on ECE |
+
+**This overturns the single-split reading.** On one split Model 1 looked 0.006 ahead of the
+forest; across ten folds the forest is 0.005 ahead, and the spread is twice either number. The
+ranking difference was noise, and it took the folds to see that.
+
+What is not noise is calibration: 10 folds out of 10, by about half the error. And Model 2,
+which ranks slightly behind Model 1, is the best-calibrated of the three (ECE 0.041) — modelling
+the peak area and deriving the probability from it beats modelling the yes/no answer directly.
+
+So the honest summary is not *the Bayesian models predict better*. It is: **they predict about
+as well and they know what they know.** For a screen deciding which compounds are worth running,
 the second property is the one worth paying for.
+
+(The same comparison on the 50 chemistry features alone, across all four splits, puts Model 1
+ahead on both counts — 20 folds of 20 on AUC. Narrow feature sets suit the linear model; wide
+ones suit the forest. `data/processed/validation_cv.csv` holds both.)
 
 ---
 

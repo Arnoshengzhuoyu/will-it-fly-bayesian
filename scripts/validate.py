@@ -149,7 +149,7 @@ def y_randomization(cur, Xdf, y, additive, reps, splits):
 # cross-validation
 # --------------------------------------------------------------------------- #
 
-def cross_validate(cur, Xdf, y, additive, splits):
+def cross_validate(cur, Xdf, y, additive, splits, tag="chem"):
     """5-fold CV inside each training set. The folds were built with the curated file and keep
     whole scaffolds or clusters together, so a fold is as honest as the outer test set."""
     m1 = _load("fit_model1")
@@ -167,23 +167,24 @@ def cross_validate(cur, Xdf, y, additive, splits):
     for split in splits:
         folds = cur[f"fold_{split}"].to_numpy()
         for k in sorted(set(folds[folds >= 0])):
+            t0 = time.time()
             tr, va = (folds >= 0) & (folds != k), folds == k
             X = m1.standardise(X_all, tr)
 
             p1 = m1.laplace_predict(m1.fit_laplace(X[tr], y[tr], "ard"), X[va])
-            rows.append({"model": "Model 1 logistic", "split": split, "fold": int(k),
-                         **score(y[va], p1)})
+            rows.append({"model": "Model 1 logistic", "features": tag, "split": split,
+                         "fold": int(k), **score(y[va], p1)})
 
             fit2 = m2.fit_laplace(X[tr], z_obs[tr], cens[tr], limit, "ard", s_meas2[tr])
             _, p2, _ = m2.predict(fit2, X[va], noise)
-            rows.append({"model": "Model 2 censored", "split": split, "fold": int(k),
-                         **score(y[va], p2)})
+            rows.append({"model": "Model 2 censored", "features": tag, "split": split,
+                         "fold": int(k), **score(y[va], p2)})
 
             rf = RandomForestClassifier(n_estimators=500, min_samples_leaf=2,
                                         n_jobs=-1, random_state=SEED).fit(X[tr], y[tr])
-            rows.append({"model": "RF baseline", "split": split, "fold": int(k),
-                         **score(y[va], rf.predict_proba(X[va])[:, 1])})
-        print(f"  {split:9s} done")
+            rows.append({"model": "RF baseline", "features": tag, "split": split,
+                         "fold": int(k), **score(y[va], rf.predict_proba(X[va])[:, 1])})
+            print(f"  {split:9s} fold {k}  ({time.time() - t0:.0f}s)", flush=True)
     return pd.DataFrame(rows)
 
 
@@ -222,8 +223,15 @@ def main() -> None:
     if "cv" in args.what:
         t = time.time()
         print("5-fold cross-validation (Model 1, Model 2, RF baseline)")
-        cv = cross_validate(cur, Xdf, y, args.additive, args.splits)
-        cv.to_csv(PROC / "validation_cv.csv", index=False)
+        cv = cross_validate(cur, Xdf, y, args.additive, args.splits, tag="+".join(args.features))
+        out = PROC / "validation_cv.csv"
+        if out.exists():          # keep results for other feature sets
+            old = pd.read_csv(out)
+            if "features" in old:
+                keep = ~old[["features", "split"]].apply(tuple, axis=1).isin(
+                    cv[["features", "split"]].apply(tuple, axis=1))
+                cv = pd.concat([old[keep], cv], ignore_index=True)
+        cv.to_csv(out, index=False)
         agg = (cv.groupby(["split", "model"])[["AUC", "MCC", "log loss", "ECE"]]
                  .agg(["mean", "std"]).round(3))
         print(agg.to_string())
