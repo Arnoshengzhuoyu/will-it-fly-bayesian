@@ -242,8 +242,15 @@ is what lets the detection probability be recomputed for any threshold without r
 
 **Features.** Three blocks: 50 interpretable chemistry features (SMARTS counts for ionisable
 groups plus RDKit descriptors), 41 XenoSite phase1 descriptors from the Swamidass lab, and
-2048-bit Morgan fingerprints. The lab descriptors were the weakest set on their own (AUC 0.834)
-and added nothing on top of the others — they were built to predict metabolism, not ionisation.
+2048-bit Morgan fingerprints.
+
+The lab descriptors were the weakest set on their own (AUC 0.834) and made the forest worse when
+added to the other two (0.885 → 0.877), so the baseline screened them out and no Bayesian model
+was given them. That reasoning is weaker than it looks: a forest has no way to ignore a feature
+block that is mostly noise, which is precisely what ARD does, and ARD turned out to be worth
++0.037 elsewhere. Whether the phase1 descriptors hold anything once ARD can discount them is an
+open question this project did not settle — the fit costs two minutes. They were built to
+predict metabolism, not ionisation, so the prior expectation is still that they carry little.
 
 ---
 
