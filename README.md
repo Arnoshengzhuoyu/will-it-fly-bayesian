@@ -244,9 +244,20 @@ is what lets the detection probability be recomputed for any threshold without r
 groups plus RDKit descriptors), 41 XenoSite phase1 descriptors from the Swamidass lab, and
 2048-bit Morgan fingerprints.
 
-The lab descriptors were the weakest set on their own (AUC 0.834) and made the forest worse when
-added to the other two (0.885 → 0.877), so the baseline screened them out and no Bayesian model
-was given them. That reasoning is weaker than it looks: a forest has no way to ignore a feature
+The forest was used to screen all six combinations before anything slower was run:
+
+| Feature set | Columns | AUC (random) | AUC (cluster) |
+|---|---|---|---|
+| phase1 | 41 | 0.834 | 0.819 |
+| chemistry | 50 | 0.846 | 0.838 |
+| Morgan | 2048 | 0.863 | 0.838 |
+| chemistry + phase1 | 87 | 0.862 | 0.844 |
+| **Morgan + chemistry** | 2098 | **0.885** | **0.866** |
+| all three | 2139 | 0.877 | 0.854 |
+
+The lab descriptors were the weakest set on their own and made the forest worse when added to
+the other two (0.885 → 0.877), so the screen dropped them and no Bayesian model was given them.
+That reasoning is weaker than it looks: a forest has no way to ignore a feature
 block that is mostly noise, which is precisely what ARD does, and ARD turned out to be worth
 +0.037 elsewhere. Whether the phase1 descriptors hold anything once ARD can discount them is an
 open question this project did not settle — the fit costs two minutes. They were built to
